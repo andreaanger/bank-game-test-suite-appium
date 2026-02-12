@@ -1,0 +1,7 @@
+## General local, build, etc.
+.DS_Store
+target/
+.idea/
+
+## Project files
+reports/screenshots/*
