@@ -47,6 +47,41 @@ public class StepDefinitions {
     private BankPlayerScreen bankScreen;
     private GameOverScreen gameOverScreen;
 
+    private GameSetupScreen gameSetupScreen() {
+        if (gameSetupScreen == null) {
+            gameSetupScreen = new GameSetupScreen(driver, QUICK_WAIT, SMALL_WAIT);
+        }
+        return gameSetupScreen;
+    }
+
+    private GameHomeScreen gameHomeScreen() {
+        if (gameHomeScreen == null) {
+            gameHomeScreen = new GameHomeScreen(driver, QUICK_WAIT, SMALL_WAIT);
+        }
+        return gameHomeScreen;
+    }
+
+    private RollScreen rollScreen() {
+        if (rollScreen == null) {
+            rollScreen = new RollScreen(driver, QUICK_WAIT, SMALL_WAIT);
+        }
+        return rollScreen;
+    }
+
+    private BankPlayerScreen bankScreen() {
+        if (bankScreen == null) {
+            bankScreen = new BankPlayerScreen(driver, QUICK_WAIT, SMALL_WAIT);
+        }
+        return bankScreen;
+    }
+
+    private GameOverScreen gameOverScreen() {
+        if (gameOverScreen == null) {
+            gameOverScreen = new GameOverScreen(driver, QUICK_WAIT, SMALL_WAIT);
+        }
+        return gameOverScreen;
+    }
+
     private Properties loadProperties() {
         Properties appProps = new Properties();
         try {
@@ -76,11 +111,6 @@ public class StepDefinitions {
     @Before
     public void createDriver() {
         driver = new ChromeDriver();
-        gameSetupScreen = new GameSetupScreen(driver, QUICK_WAIT, SMALL_WAIT);
-        gameHomeScreen = new GameHomeScreen(driver, QUICK_WAIT, SMALL_WAIT);
-        rollScreen = new RollScreen(driver, QUICK_WAIT, SMALL_WAIT);
-        bankScreen = new BankPlayerScreen(driver, QUICK_WAIT, SMALL_WAIT);
-        gameOverScreen = new GameOverScreen(driver, QUICK_WAIT, SMALL_WAIT);
     }
 
     @Before
@@ -125,33 +155,33 @@ public class StepDefinitions {
     //region SETUP SCREEN  ----------------------------------------------------------------
     @When("user adds player name {string}")
     public void addPlayerName(String playerName) {
-        gameSetupScreen.addPlayerName(playerName);
+        gameSetupScreen().addPlayerName(playerName);
     }
 
     @When("user adds the following players to the game:")
     public void addPlayersToGame(List<String> playerNames) {
-        gameSetupScreen.addPlayers(playerNames);
+        gameSetupScreen().addPlayers(playerNames);
     }
 
     @When("^user selects (10|15|20) rounds for the game")
     public void selectRoundsForGame(String rounds) {
-        gameSetupScreen.selectRounds(rounds);
+        gameSetupScreen().selectRounds(rounds);
     }
 
     @When("user taps Start Game button")
     public void startGame() {
-        gameSetupScreen.startGame();
+        gameSetupScreen().startGame();
     }
 
     @Then("verify bank game setup screen is displayed")
     public void verifyGameSetupScreen() {
-        String actualGameTitle = gameSetupScreen.getTitle();
+        String actualGameTitle = gameSetupScreen().getTitle();
         assertEquals("\uD83E\uDD11 BANK \uD83E\uDD11", actualGameTitle);
     }
 
     @Then("^verify (10|15|20) rounds for the game has been selected \"([^\"]+)\"")
     public void verifyRoundsSelected(String rounds, String stepID) {
-        String actualSelected = gameSetupScreen.getSelectedRound();
+        String actualSelected = gameSetupScreen().getSelectedRound();
         assertEquals(rounds, actualSelected);
         takeScreenshot(stepID);
     }
@@ -160,13 +190,13 @@ public class StepDefinitions {
     //region GAME HOME SCREEN  ----------------------------------------------------------------
     @When("user taps Roll button")
     public void tapRollButton() {
-        gameHomeScreen.tapRollButton();
+        gameHomeScreen().tapRollButton();
     }
 
     @Then("verify ROUND {int} of {int} is displayed {string}")
     public void verifyRoundDuringGame(int currentRound, int totalRounds, String stepId) {
         String expectedRounds = String.format("ROUND: %d/%d", currentRound, totalRounds);
-        String actualRounds = gameHomeScreen.getRoundLabel();
+        String actualRounds = gameHomeScreen().getRoundLabel();
         assertEquals(expectedRounds, actualRounds);
         takeScreenshot(stepId);
     }
@@ -174,14 +204,14 @@ public class StepDefinitions {
     @Then("verify ROLL of {int} is displayed {string}")
     public void verifyRollNumberForRound(int currentRoll, String stepId) {
         String expectedRoll = String.format("ROLL: %d", currentRoll);
-        String actualRoll = gameHomeScreen.getRollLabel();
+        String actualRoll = gameHomeScreen().getRollLabel();
         assertEquals(expectedRoll, actualRoll);
         takeScreenshot(stepId);
     }
 
     @Then("verify CURRENT ROUND POINTS of {int} is displayed {string}")
     public void verifyCurrentRoundPoints(int expectedRoundPoints, String stepId) {
-        int actualRoundPoints = gameHomeScreen.getCurrentRoundPoints();
+        int actualRoundPoints = gameHomeScreen().getCurrentRoundPoints();
         assertEquals(expectedRoundPoints, actualRoundPoints);
         takeScreenshot(stepId);
     }
@@ -190,13 +220,13 @@ public class StepDefinitions {
     public void verifyLeaderboardValues(String stepId, Map<String, String> expectedLeaderboardData) {
         takeScreenshot(stepId);
         try {
-            gameHomeScreen.waitForLeaderboardVisible();
+            gameHomeScreen().waitForLeaderboardVisible();
             int i = 0;
             for (Map.Entry<String, String> entry : expectedLeaderboardData.entrySet()) {
                 String expectedName = entry.getKey();
                 String expectedScore = entry.getValue();
-                String actualName = gameHomeScreen.getLeaderboardPlayerName(i);
-                String actualScore = gameHomeScreen.getLeaderboardPlayerScore(i);
+                String actualName = gameHomeScreen().getLeaderboardPlayerName(i);
+                String actualScore = gameHomeScreen().getLeaderboardPlayerScore(i);
                 assertEquals(expectedName, actualName, "Leaderboard player name at index: " + i);
                 assertEquals(expectedScore, actualScore, "Leaderboard player score at index: " + i);
                 i++;
@@ -209,7 +239,7 @@ public class StepDefinitions {
     @Then("^verify the (2|12|DBL) roll button is (enabled|disabled)")
     public void verifyButtonEnabledState(String rollValue, String enabledOrDisabled) {
         boolean expectedEnabled = enabledOrDisabled.equals("enabled");
-        boolean actualEnabled = gameHomeScreen.isRollValueEnabled(rollValue);
+        boolean actualEnabled = gameHomeScreen().isRollValueEnabled(rollValue);
         assertEquals(expectedEnabled, actualEnabled, rollValue + " button is enabled/disabled");
     }
 
@@ -221,7 +251,7 @@ public class StepDefinitions {
     @Then("verify current player turn is displayed as {string} {string}")
     public void verifyPlayerTurn(String playerName, String stepId) {
         try {
-            String actualPlayerTurn = gameHomeScreen.getCurrentPlayerTurn();
+            String actualPlayerTurn = gameHomeScreen().getCurrentPlayerTurn();
             assertEquals(playerName, actualPlayerTurn, "current players turn");
             takeScreenshot(stepId);
         } catch (AssertionError e) {
@@ -236,7 +266,7 @@ public class StepDefinitions {
     @When("current player rolls {string}")
     public void playerRoll(String rollValue) {
         try {
-            rollScreen.clickRollValue(rollValue);
+            rollScreen().clickRollValue(rollValue);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -266,30 +296,30 @@ public class StepDefinitions {
 
     @When("user taps bank button on roll screen")
     public void tapOnBankButtonOnRollScreen() {
-        rollScreen.tapBankButton();
+        rollScreen().tapBankButton();
     }
 
     @When("user taps close button on roll screen")
     public void tapOnCloseButtonOnRollScreen() {
-        rollScreen.tapCloseButton();
+        rollScreen().tapCloseButton();
     }
     //endregion ----------------------------------------------------------------
 
     //region BANK SCREEN ----------------------------------------------------------------
     @When("user taps bank players button on bank screen")
     public void tapOnBankButtonOnBankScreen() {
-        bankScreen.tapBankPlayersButton();
+        bankScreen().tapBankPlayersButton();
     }
 
     @When("user taps player name {string} on bank screen")
     public void selectPlayerToBank(String playerName) {
-        bankScreen.selectPlayer(playerName);
+        bankScreen().selectPlayer(playerName);
     }
 
     @Then("verify the bank screen is displayed as follows {string}:")
     public void verifyBankablePlayers(String stepId, List<String> bankablePlayers) {
         bankablePlayers = new ArrayList<>(bankablePlayers); //convert to mutable list
-        List<String> actualBankablePlayers = bankScreen.getBankablePlayers();
+        List<String> actualBankablePlayers = bankScreen().getBankablePlayers();
         // sort lists to account for different player orders
         Collections.sort(bankablePlayers);
         Collections.sort(actualBankablePlayers);
@@ -304,14 +334,14 @@ public class StepDefinitions {
     //region GAME OVER SCREEN ----------------------------------------------------------------
     @Then("verify Game Results screen is displayed {string}")
     public void verifyGameResultsScreen(String stepId) {
-        assertTrue(gameOverScreen.isDisplayed());
+        assertTrue(gameOverScreen().isDisplayed());
         takeScreenshot(stepId);
     }
 
     @Then("verify Game Result displays winner as {string} with {int} points {string}")
     public void verifyGameWinner(String expectedWinnerName, int expectedWinnerPoints, String stepId) {
-        assertEquals(expectedWinnerName, gameOverScreen.getWinnerName());
-        assertEquals(expectedWinnerPoints, gameOverScreen.getWinnerScore());
+        assertEquals(expectedWinnerName, gameOverScreen().getWinnerName());
+        assertEquals(expectedWinnerPoints, gameOverScreen().getWinnerScore());
         takeScreenshot(stepId);
     }
 
@@ -319,13 +349,13 @@ public class StepDefinitions {
     public void verifyGameResultsLeaderboard(String stepId, Map<String, String> expectedLeaderboardData) {
         takeScreenshot(stepId);
         try {
-            gameOverScreen.waitForFinalLeaderboardVisible();
+            gameOverScreen().waitForFinalLeaderboardVisible();
             int i = 2;
             for (Map.Entry<String, String> entry : expectedLeaderboardData.entrySet()) {
                 String expectedName = entry.getKey();
                 String expectedScore = entry.getValue();
-                String actualName = gameOverScreen.getLeaderboardPlayerName(i);
-                String actualScore = gameOverScreen.getLeaderboardPlayerScore(i);
+                String actualName = gameOverScreen().getLeaderboardPlayerName(i);
+                String actualScore = gameOverScreen().getLeaderboardPlayerScore(i);
                 assertEquals(expectedName, actualName, String.format("Leaderboard player name at index: %d", i - 2));
                 assertEquals(expectedScore, actualScore, String.format("Leaderboard player score at index: %d", i - 2));
                 i++;
