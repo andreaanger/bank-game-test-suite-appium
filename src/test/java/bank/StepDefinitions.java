@@ -1,5 +1,10 @@
 package bank;
 
+import bank.screens.BankPlayerScreen;
+import bank.screens.GameHomeScreen;
+import bank.screens.GameOverScreen;
+import bank.screens.RollScreen;
+import bank.screens.GameSetupScreen;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.*;
@@ -23,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.*;
 /// /////////////////////////////////////////////////
 // TODO:
 // generate pdf of screenshots at end of execution
-// break out into screens (setup, game home, and roll) - locators, actions, verification
 // add catch for element not found
 // assertions fail appropriately and reported in results
 /// /////////////////////////////////////////////////
@@ -37,6 +41,11 @@ public class StepDefinitions {
     public final String APP_URL = appConfigs.getProperty("APP_URL");
     public final int QUICK_WAIT = 1;
     public final int SMALL_WAIT = 5;
+    private GameSetupScreen gameSetupScreen;
+    private GameHomeScreen gameHomeScreen;
+    private RollScreen rollScreen;
+    private BankPlayerScreen bankScreen;
+    private GameOverScreen gameOverScreen;
 
     private Properties loadProperties() {
         Properties appProps = new Properties();
@@ -67,6 +76,11 @@ public class StepDefinitions {
     @Before
     public void createDriver() {
         driver = new ChromeDriver();
+        gameSetupScreen = new GameSetupScreen(driver, QUICK_WAIT, SMALL_WAIT);
+        gameHomeScreen = new GameHomeScreen(driver, QUICK_WAIT, SMALL_WAIT);
+        rollScreen = new RollScreen(driver, QUICK_WAIT, SMALL_WAIT);
+        bankScreen = new BankPlayerScreen(driver, QUICK_WAIT, SMALL_WAIT);
+        gameOverScreen = new GameOverScreen(driver, QUICK_WAIT, SMALL_WAIT);
     }
 
     @Before
@@ -111,41 +125,33 @@ public class StepDefinitions {
     //region SETUP SCREEN  ----------------------------------------------------------------
     @When("user adds player name {string}")
     public void addPlayerName(String playerName) {
-        WebElement playerInput = driver.findElement(By.xpath("//*[@class='playerName']"));
-        playerInput.sendKeys(playerName);
+        gameSetupScreen.addPlayerName(playerName);
     }
 
     @When("user adds the following players to the game:")
     public void addPlayersToGame(List<String> playerNames) {
-        for (int i=0; i < playerNames.size(); i++) {
-            WebElement playerInput = driver.findElement(By.xpath("(//*[@class='playerName'])[last()]"));
-            playerInput.sendKeys(playerNames.get(i));
-            // if not the last player, tap the plus button
-            if (i != playerNames.size() - 1) {
-                driver.findElement(By.id("addPlayerButton")).click();
-            }
-        }
+        gameSetupScreen.addPlayers(playerNames);
     }
 
     @When("^user selects (10|15|20) rounds for the game")
     public void selectRoundsForGame(String rounds) {
-        driver.findElement(By.xpath("//*[text()='" + rounds + "']")).click();
+        gameSetupScreen.selectRounds(rounds);
     }
 
     @When("user taps Start Game button")
     public void startGame() {
-        driver.findElement(By.id("start-game")).click();
+        gameSetupScreen.startGame();
     }
 
     @Then("verify bank game setup screen is displayed")
     public void verifyGameSetupScreen() {
-        String actualGameTitle = driver.findElement(By.id("title")).getText();
+        String actualGameTitle = gameSetupScreen.getTitle();
         assertEquals("\uD83E\uDD11 BANK \uD83E\uDD11", actualGameTitle);
     }
 
     @Then("^verify (10|15|20) rounds for the game has been selected \"([^\"]+)\"")
     public void verifyRoundsSelected(String rounds, String stepID) {
-        String actualSelected = driver.findElement(By.className("selected-round-option")).getText();
+        String actualSelected = gameSetupScreen.getSelectedRound();
         assertEquals(rounds, actualSelected);
         takeScreenshot(stepID);
     }
@@ -154,15 +160,13 @@ public class StepDefinitions {
     //region GAME HOME SCREEN  ----------------------------------------------------------------
     @When("user taps Roll button")
     public void tapRollButton() {
-        driver.findElement(By.id("play-button")).click();
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(QUICK_WAIT));
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("game-roll")));
+        gameHomeScreen.tapRollButton();
     }
 
     @Then("verify ROUND {int} of {int} is displayed {string}")
     public void verifyRoundDuringGame(int currentRound, int totalRounds, String stepId) {
         String expectedRounds = String.format("ROUND: %d/%d", currentRound, totalRounds);
-        String actualRounds = driver.findElement(By.id("rounds")).getText();
+        String actualRounds = gameHomeScreen.getRoundLabel();
         assertEquals(expectedRounds, actualRounds);
         takeScreenshot(stepId);
     }
@@ -170,14 +174,14 @@ public class StepDefinitions {
     @Then("verify ROLL of {int} is displayed {string}")
     public void verifyRollNumberForRound(int currentRoll, String stepId) {
         String expectedRoll = String.format("ROLL: %d", currentRoll);
-        String actualRoll = driver.findElement(By.id("roll")).getText();
+        String actualRoll = gameHomeScreen.getRollLabel();
         assertEquals(expectedRoll, actualRoll);
         takeScreenshot(stepId);
     }
 
     @Then("verify CURRENT ROUND POINTS of {int} is displayed {string}")
     public void verifyCurrentRoundPoints(int expectedRoundPoints, String stepId) {
-        int actualRoundPoints = Integer.parseInt(driver.findElement(By.id("round-points")).getText());
+        int actualRoundPoints = gameHomeScreen.getCurrentRoundPoints();
         assertEquals(expectedRoundPoints, actualRoundPoints);
         takeScreenshot(stepId);
     }
@@ -186,15 +190,13 @@ public class StepDefinitions {
     public void verifyLeaderboardValues(String stepId, Map<String, String> expectedLeaderboardData) {
         takeScreenshot(stepId);
         try {
-            //TODO: cleanup wait - separate from method
-            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(SMALL_WAIT));
-            wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("game-leaderboard")));
+            gameHomeScreen.waitForLeaderboardVisible();
             int i = 0;
             for (Map.Entry<String, String> entry : expectedLeaderboardData.entrySet()) {
                 String expectedName = entry.getKey();
                 String expectedScore = entry.getValue();
-                String actualName = driver.findElement(By.id(String.format("player-%d-name", i))).getText();
-                String actualScore = driver.findElement(By.id(String.format("player-%d-score", i))).getText();
+                String actualName = gameHomeScreen.getLeaderboardPlayerName(i);
+                String actualScore = gameHomeScreen.getLeaderboardPlayerScore(i);
                 assertEquals(expectedName, actualName, "Leaderboard player name at index: " + i);
                 assertEquals(expectedScore, actualScore, "Leaderboard player score at index: " + i);
                 i++;
@@ -207,7 +209,7 @@ public class StepDefinitions {
     @Then("^verify the (2|12|DBL) roll button is (enabled|disabled)")
     public void verifyButtonEnabledState(String rollValue, String enabledOrDisabled) {
         boolean expectedEnabled = enabledOrDisabled.equals("enabled");
-        boolean actualEnabled = driver.findElement(By.xpath("//*[text()='" + rollValue + "']")).isEnabled();
+        boolean actualEnabled = gameHomeScreen.isRollValueEnabled(rollValue);
         assertEquals(expectedEnabled, actualEnabled, rollValue + " button is enabled/disabled");
     }
 
@@ -219,7 +221,7 @@ public class StepDefinitions {
     @Then("verify current player turn is displayed as {string} {string}")
     public void verifyPlayerTurn(String playerName, String stepId) {
         try {
-            String actualPlayerTurn = driver.findElement(By.id("currentPlayerToRoll")).getText();
+            String actualPlayerTurn = gameHomeScreen.getCurrentPlayerTurn();
             assertEquals(playerName, actualPlayerTurn, "current players turn");
             takeScreenshot(stepId);
         } catch (AssertionError e) {
@@ -234,9 +236,7 @@ public class StepDefinitions {
     @When("current player rolls {string}")
     public void playerRoll(String rollValue) {
         try {
-            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(SMALL_WAIT));
-            WebElement rollButton = wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//*[text()='" + rollValue + "']")));
-            rollButton.click();
+            rollScreen.clickRollValue(rollValue);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -266,34 +266,30 @@ public class StepDefinitions {
 
     @When("user taps bank button on roll screen")
     public void tapOnBankButtonOnRollScreen() {
-        driver.findElement(By.id("bank-button")).click();
+        rollScreen.tapBankButton();
     }
 
     @When("user taps close button on roll screen")
     public void tapOnCloseButtonOnRollScreen() {
-        driver.findElement(By.id("close-roll")).click();
+        rollScreen.tapCloseButton();
     }
     //endregion ----------------------------------------------------------------
 
     //region BANK SCREEN ----------------------------------------------------------------
     @When("user taps bank players button on bank screen")
     public void tapOnBankButtonOnBankScreen() {
-        driver.findElement(By.id("bank-players")).click();
+        bankScreen.tapBankPlayersButton();
     }
 
     @When("user taps player name {string} on bank screen")
     public void selectPlayerToBank(String playerName) {
-        driver.findElement(By.xpath("//label[text()='" + playerName + "']")).click();
+        bankScreen.selectPlayer(playerName);
     }
 
     @Then("verify the bank screen is displayed as follows {string}:")
     public void verifyBankablePlayers(String stepId, List<String> bankablePlayers) {
         bankablePlayers = new ArrayList<>(bankablePlayers); //convert to mutable list
-        List<WebElement> actualPlayersList = driver.findElements(By.xpath("//div[@id='players-to-bank']/label"));
-        List<String> actualBankablePlayers = new ArrayList<>();
-        for (WebElement player : actualPlayersList) {
-            actualBankablePlayers.add(player.getText());
-        }
+        List<String> actualBankablePlayers = bankScreen.getBankablePlayers();
         // sort lists to account for different player orders
         Collections.sort(bankablePlayers);
         Collections.sort(actualBankablePlayers);
@@ -308,14 +304,14 @@ public class StepDefinitions {
     //region GAME OVER SCREEN ----------------------------------------------------------------
     @Then("verify Game Results screen is displayed {string}")
     public void verifyGameResultsScreen(String stepId) {
-        assertTrue(driver.findElement(By.id("game-end")).isDisplayed());
+        assertTrue(gameOverScreen.isDisplayed());
         takeScreenshot(stepId);
     }
 
     @Then("verify Game Result displays winner as {string} with {int} points {string}")
     public void verifyGameWinner(String expectedWinnerName, int expectedWinnerPoints, String stepId) {
-        assertEquals(expectedWinnerName, driver.findElement(By.id("winner-name")).getText());
-        assertEquals(expectedWinnerPoints, Integer.parseInt(driver.findElement(By.id("winner-score")).getText()));
+        assertEquals(expectedWinnerName, gameOverScreen.getWinnerName());
+        assertEquals(expectedWinnerPoints, gameOverScreen.getWinnerScore());
         takeScreenshot(stepId);
     }
 
@@ -323,15 +319,13 @@ public class StepDefinitions {
     public void verifyGameResultsLeaderboard(String stepId, Map<String, String> expectedLeaderboardData) {
         takeScreenshot(stepId);
         try {
-            //TODO: cleanup wait - separate from method
-            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(SMALL_WAIT));
-            wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("game-final-leaderboard")));
+            gameOverScreen.waitForFinalLeaderboardVisible();
             int i = 2;
             for (Map.Entry<String, String> entry : expectedLeaderboardData.entrySet()) {
                 String expectedName = entry.getKey();
                 String expectedScore = entry.getValue();
-                String actualName = driver.findElement(By.xpath(String.format("//*[@id=\"leaderboardPlayer-%d\"]/descendant::*[@class=\"leaderboardPlayer-name\"]", i))).getText();
-                String actualScore = driver.findElement(By.xpath(String.format("//*[@id=\"leaderboardPlayer-%d\"]/descendant::*[@class=\"leaderboardPlayer-score\"]", i))).getText();
+                String actualName = gameOverScreen.getLeaderboardPlayerName(i);
+                String actualScore = gameOverScreen.getLeaderboardPlayerScore(i);
                 assertEquals(expectedName, actualName, String.format("Leaderboard player name at index: %d", i - 2));
                 assertEquals(expectedScore, actualScore, String.format("Leaderboard player score at index: %d", i - 2));
                 i++;
